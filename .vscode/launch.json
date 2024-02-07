@@ -17,7 +17,7 @@
             "request": "launch",
             "mainClass": "com.zlab.App",
             "projectName": "matrixGame",
-            "args": ["src/test/config.1.json","100"]
+            "args": ["src/test/config.0.json","100"]
         }
     ]
 }

@@ -13,6 +13,7 @@ import java.util.Random;
 import javax.swing.RowFilter.Entry;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zlab.SlotMachineConfig.SymbolType;
 import com.zlab.SlotMachineConfig.WinCombination;
 
 public class App {
@@ -35,7 +36,7 @@ public class App {
     }
 
     //, java.util.Map.Entry<String, WinCombination> entry
-    private static void calculatePrize(String[][] matrix, SlotMachineConfig cfg, double bet) {
+    private static double calculatePrize(String[][] matrix, SlotMachineConfig cfg, double bet) {
         //System.out.print("occurrencesMap:", occurrencesMap);
         double reward = 0;
 
@@ -51,30 +52,59 @@ public class App {
                 //occurrencesMap.values().stream().sorted().filter(e -> e < sameSymbolWin.getValue().count )
                 System.out.println(occurrence);
             }
-            
+
             List<Map.Entry<String,Integer>> occurrencesSorted = occurrencesMap.entrySet()
             .stream()
+            .filter(c -> cfg.symbols.get(c.getKey()).type == SymbolType.standard)
             .sorted((a,b) -> b.getValue() - a.getValue())
             .collect(Collectors.toList());
 
             System.out.println("occurrencesSorted:" +occurrencesSorted);
-            
+
+            System.out.println("Begining the main loop...");
             Iterator<Map.Entry<String,Integer>> iOccurrencesSorted = occurrencesSorted.iterator();
-            for(Map.Entry<String,WinCombination> sameSymbolWin: sameSymbolWinsSorted){
-                //occurrencesMap.values().stream().sorted().filter(e -> e < sameSymbolWin.getValue().count )
-                System.out.println(sameSymbolWin);
-                if(iOccurrencesSorted.hasNext())
-                {
-                    java.util.Map.Entry<String, Integer> next = iOccurrencesSorted.next();
-                    if(next.getValue() >= sameSymbolWin.getValue().count){
+            while(iOccurrencesSorted.hasNext())
+            {
+                java.util.Map.Entry<String, Integer> next = iOccurrencesSorted.next();
+                //if(cfg.symbols.get(next.getKey()).type != SymbolType.standard) continue;
+                for(Map.Entry<String,WinCombination> sameSymbolWin: sameSymbolWinsSorted){
+                    //occurrencesMap.values().stream().sorted().filter(e -> e < sameSymbolWin.getValue().count )
+                    System.out.println(sameSymbolWin);
+                    if(sameSymbolWin.getValue().count <= next.getValue()){
+                        System.out.println("Win combination detected");
+                        System.out.println(next.getKey()+":"+next.getValue());
+                        System.out.println(sameSymbolWin.getKey()+":"+sameSymbolWin.getValue());
                         String symbol = next.getKey();
                         double symbolMultiplier = cfg.symbols.get(symbol).reward_multiplier;
-                        reward += sameSymbolWin.getValue().reward_multiplier * symbolMultiplier * bet;
+                        System.out.println("symbolMultiplier"+":"+symbolMultiplier);
+                        double rewardMultiplier = sameSymbolWin.getValue().reward_multiplier;
+                        System.out.println("rewardMultiplier"+":"+rewardMultiplier);
+                        reward += rewardMultiplier * symbolMultiplier * bet;
+                        break;
                     }
                 }
             }
-            System.out.println("reward: "+reward);
+            System.out.println("basic reward : "+reward);
+
+            List<Map.Entry<String,Integer>> bonusesSorted = occurrencesMap.entrySet()
+            .stream()
+            .filter(c -> cfg.symbols.get(c.getKey()).type == SymbolType.bonus)
+            .collect(Collectors.toList());
+
+            for (Map.Entry<String,Integer> bonusEntry : bonusesSorted){
+                System.out.println(bonusEntry);
+                switch (cfg.symbols.get(bonusEntry.getKey()).impact) {
+                    case "multiply_reward":
+                            reward *= cfg.symbols.get(bonusEntry.getKey()).reward_multiplier*bonusEntry.getValue();
+                        break;
+                    case "expand_bonus":
+                        reward += cfg.symbols.get(bonusEntry.getKey()).extra*bonusEntry.getValue();
+                        break;
+                }
+            }
+            System.out.println("total reward : "+reward);
         }
+        return reward;
     }
 
     private static Map<String, Integer> countOccurrences(String[][] matrix) {
