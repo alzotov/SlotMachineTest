@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Random;
@@ -31,14 +32,21 @@ public class App {
 
         String[][] matrix = generateMatrix(cfg);
 
-        calculatePrize(matrix, cfg, bet);
+        double reward = calculatePrize(matrix, cfg, bet);
+
+        SlotResult output = new SlotResult();
+        output.matrix = matrix;
+        output.reward = reward;
+        output.appliedWinningCombinations = cfg.win_combinations;
 
     }
-
+    
     //, java.util.Map.Entry<String, WinCombination> entry
-    private static double calculatePrize(String[][] matrix, SlotMachineConfig cfg, double bet) {
+    private static SlotResult calculatePrize(String[][] matrix, SlotMachineConfig cfg, double bet) {
         //System.out.print("occurrencesMap:", occurrencesMap);
         double reward = 0;
+        Map<String,String> appliedWinningCombinations = new HashMap<String,String>();
+        String appliedBonusSymbol = null;
 
         List<Map.Entry<String,WinCombination>> sameSymbolWinsSorted = cfg.win_combinations.entrySet()
         .stream()
@@ -62,6 +70,7 @@ public class App {
             System.out.println("occurrencesSorted:" +occurrencesSorted);
 
             System.out.println("Begining the main loop...");
+
             Iterator<Map.Entry<String,Integer>> iOccurrencesSorted = occurrencesSorted.iterator();
             while(iOccurrencesSorted.hasNext())
             {
@@ -80,6 +89,8 @@ public class App {
                         double rewardMultiplier = sameSymbolWin.getValue().reward_multiplier;
                         System.out.println("rewardMultiplier"+":"+rewardMultiplier);
                         reward += rewardMultiplier * symbolMultiplier * bet;
+
+                        appliedWinningCombinations.put(symbol, sameSymbolWin.getKey());
                         break;
                     }
                 }
@@ -91,20 +102,39 @@ public class App {
             .filter(c -> cfg.symbols.get(c.getKey()).type == SymbolType.bonus)
             .collect(Collectors.toList());
 
-            for (Map.Entry<String,Integer> bonusEntry : bonusesSorted){
-                System.out.println(bonusEntry);
-                switch (cfg.symbols.get(bonusEntry.getKey()).impact) {
-                    case "multiply_reward":
-                            reward *= cfg.symbols.get(bonusEntry.getKey()).reward_multiplier*bonusEntry.getValue();
-                        break;
-                    case "expand_bonus":
-                        reward += cfg.symbols.get(bonusEntry.getKey()).extra*bonusEntry.getValue();
-                        break;
-                }
+            Map.Entry<String, Integer> bonusMulti=bonusesSorted.stream()
+            .filter(e -> cfg.symbols.get(e.getKey()).impact == "multiply_reward")
+            .findFirst()
+            .orElse(null);
+
+            Map.Entry<String,Integer> bonusExtra=bonusesSorted.stream()
+            .filter(e -> cfg.symbols.get(e.getKey()).impact == "extra_bonus")
+            .findFirst()
+            .orElse(null);
+
+            double rewardMulti = reward * (bonusMulti!=null ? cfg.symbols.get(bonusMulti.getKey()).reward_multiplier : 1);
+            double rewardExtra = reward * (bonusExtra!=null ? cfg.symbols.get(bonusMulti.getKey()).extra : 0);
+
+            if(rewardMulti > rewardExtra)
+            {
+                appliedBonusSymbol = (bonusMulti!=null) ? bonusMulti.getKey(): null;
+                reward = rewardMulti;
             }
+            else
+            {
+                appliedBonusSymbol = (bonusExtra!=null) ? bonusExtra.getKey(): null;
+                reward = rewardExtra;
+            }
+
             System.out.println("total reward : "+reward);
         }
-        return reward;
+
+        SlotResult rz = new SlotResult();
+        rz.matrix = matrix;
+        rz.reward = reward;
+        rz.appliedWinningCombinations = appliedWinningCombinations;
+        rz.appliedBonusSymbol = appliedBonusSymbol;
+        return rz;
     }
 
     private static Map<String, Integer> countOccurrences(String[][] matrix) {
