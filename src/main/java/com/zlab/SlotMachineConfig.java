@@ -10,6 +10,21 @@ public class SlotMachineConfig {
         bonus
     }
 
+    public enum WinGroup {
+        same_symbols,
+        horizontally_linear_symbols,
+        vertically_linear_symbols,
+        ltr_diagonally_linear_symbols,
+        rtl_diagonally_linear_symbols
+    }
+
+    public enum WinType {
+        same_symbols,
+        linear_symbols,
+        same_symbols_diagonally_right_to_left,
+        same_symbols_diagonally_left_to_right
+    }
+
     public static class Symbol {
         public double reward_multiplier;
         public SymbolType type;
@@ -34,9 +49,9 @@ public class SlotMachineConfig {
 
     public static class WinCombination {
         public double reward_multiplier;
-        public String when;
+        public WinType when;
         public int count;
-        public String group;
+        public WinGroup group;
         public List<List<String>> covered_areas; // Only applicable for some win combinations
         @Override
         public String toString() {
