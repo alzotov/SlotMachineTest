@@ -2,6 +2,8 @@ package com.zlab;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -32,12 +34,11 @@ public class App {
 
         String[][] matrix = generateMatrix(cfg);
 
-        double reward = calculatePrize(matrix, cfg, bet);
+        SlotResult rz = calculatePrize(matrix, cfg, bet);
 
-        SlotResult output = new SlotResult();
-        output.matrix = matrix;
-        output.reward = reward;
-        output.appliedWinningCombinations = cfg.win_combinations;
+        String json = serializeJson(rz);
+        
+        System.out.println("Serialized JSON: " + json);        
 
     }
     
@@ -45,7 +46,7 @@ public class App {
     private static SlotResult calculatePrize(String[][] matrix, SlotMachineConfig cfg, double bet) {
         //System.out.print("occurrencesMap:", occurrencesMap);
         double reward = 0;
-        Map<String,String> appliedWinningCombinations = new HashMap<String,String>();
+        Map<String,List<String>> appliedWinningCombinations = new HashMap<String,List<String>>();
         String appliedBonusSymbol = null;
 
         List<Map.Entry<String,WinCombination>> sameSymbolWinsSorted = cfg.win_combinations.entrySet()
@@ -78,7 +79,7 @@ public class App {
                 //if(cfg.symbols.get(next.getKey()).type != SymbolType.standard) continue;
                 for(Map.Entry<String,WinCombination> sameSymbolWin: sameSymbolWinsSorted){
                     //occurrencesMap.values().stream().sorted().filter(e -> e < sameSymbolWin.getValue().count )
-                    System.out.println(sameSymbolWin);
+                    //System.out.println(sameSymbolWin);
                     if(sameSymbolWin.getValue().count <= next.getValue()){
                         System.out.println("Win combination detected");
                         System.out.println(next.getKey()+":"+next.getValue());
@@ -90,7 +91,7 @@ public class App {
                         System.out.println("rewardMultiplier"+":"+rewardMultiplier);
                         reward += rewardMultiplier * symbolMultiplier * bet;
 
-                        appliedWinningCombinations.put(symbol, sameSymbolWin.getKey());
+                        appliedWinningCombinations.put(symbol, new ArrayList<>(Arrays.asList(sameSymbolWin.getKey())));
                         break;
                     }
                 }
@@ -113,7 +114,7 @@ public class App {
             .orElse(null);
 
             double rewardMulti = reward * (bonusMulti!=null ? cfg.symbols.get(bonusMulti.getKey()).reward_multiplier : 1);
-            double rewardExtra = reward * (bonusExtra!=null ? cfg.symbols.get(bonusMulti.getKey()).extra : 0);
+            double rewardExtra = reward + (bonusExtra!=null ? cfg.symbols.get(bonusMulti.getKey()).extra : 0);
 
             if(rewardMulti > rewardExtra)
             {
@@ -234,7 +235,6 @@ public class App {
     public static SlotMachineConfig parseJson(String jsonFilePath) {
         ObjectMapper objectMapper = new ObjectMapper();
         // System.out.println("Working Directory = " + System.getProperty("user.dir"));
-
         try {
             // Read JSON file and parse it into SlotMachineConfiguration class
             return objectMapper.readValue(new File(jsonFilePath), SlotMachineConfig.class);
@@ -243,5 +243,15 @@ public class App {
             return null;
         }
     }
+
+    public static String serializeJson(final SlotResult rz) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            return objectMapper.writeValueAsString(rz);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }     
 }
 
