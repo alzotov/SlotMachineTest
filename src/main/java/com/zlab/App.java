@@ -114,7 +114,7 @@ public class App {
             .orElse(null);
 
             double rewardMulti = reward * (bonusMulti!=null ? cfg.symbols.get(bonusMulti.getKey()).reward_multiplier : 1);
-            double rewardExtra = reward + (bonusExtra!=null ? cfg.symbols.get(bonusMulti.getKey()).extra : 0);
+            double rewardExtra = reward + (bonusExtra!=null ? cfg.symbols.get(bonusExtra.getKey()).extra : 0);
 
             if(rewardMulti > rewardExtra)
             {
