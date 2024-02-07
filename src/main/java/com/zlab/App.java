@@ -104,12 +104,12 @@ public class App {
             .collect(Collectors.toList());
 
             Map.Entry<String, Integer> bonusMulti=bonusesSorted.stream()
-            .filter(e -> cfg.symbols.get(e.getKey()).impact == "multiply_reward")
+            .filter(e -> cfg.symbols.get(e.getKey()).impact.equals("multiply_reward"))
             .findFirst()
             .orElse(null);
 
             Map.Entry<String,Integer> bonusExtra=bonusesSorted.stream()
-            .filter(e -> cfg.symbols.get(e.getKey()).impact == "extra_bonus")
+            .filter(e -> cfg.symbols.get(e.getKey()).impact.equals("extra_bonus"))
             .findFirst()
             .orElse(null);
 
